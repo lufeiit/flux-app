@@ -68,7 +68,7 @@ jobs:
         run: flutter pub run flutter_launcher_icons
 
 # ---------------------------------------------------------
-# 3. Android（多架构）
+# 3. Android（split-per-abi）
 # ---------------------------------------------------------
   android:
     name: Android
@@ -93,41 +93,10 @@ jobs:
           path: build/app/outputs/flutter-apk/*.apk
 
 # ---------------------------------------------------------
-# 4. iOS（arm64，无签名）
-# ---------------------------------------------------------
-  ios:
-    name: iOS
-    needs: [prepare, detect_flutter]
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ needs.detect_flutter.outputs.flutter_version }}
-
-      - run: flutter pub get
-
-      - name: Install CocoaPods
-        working-directory: ios
-        run: |
-          sudo gem install cocoapods
-          pod install
-
-      - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flux-ios
-          path: build/ios/iphoneos/
-
-# ---------------------------------------------------------
-# 5. macOS Universal（arm64 + x86_64）
+# 4. macOS（DMG + strip）
 # ---------------------------------------------------------
   macos:
-    name: macOS Universal
+    name: macOS DMG
     needs: [prepare, detect_flutter]
     runs-on: macos-latest
 
@@ -141,22 +110,39 @@ jobs:
       - run: flutter pub get
       - run: flutter build macos --release
 
+      - name: Remove dSYM
+        run: rm -rf build/macos/Build/Products/Release/*.dSYM
+
+      - name: Strip macOS binaries
+        run: |
+          find build/macos/Build/Products/Release/*.app -type f -perm +111 -exec strip {} \; || true
+
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create DMG
+        run: |
+          APP=$(ls build/macos/Build/Products/Release/*.app | xargs -n 1 basename)
+          create-dmg \
+            --volname "LufeiCloud" \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 400 200 \
+            "LufeiCloud.dmg" \
+            "build/macos/Build/Products/Release/$APP"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: flux-macos
-          path: build/macos/Build/Products/Release/
+          name: flux-macos-dmg
+          path: LufeiCloud.dmg
 
 # ---------------------------------------------------------
-# 6. Windows（x64 + arm64）
+# 5. Windows（ZIP + MSIX + strip + UPX）
 # ---------------------------------------------------------
   windows:
-    name: Windows
+    name: Windows ZIP + MSIX
     needs: [prepare, detect_flutter]
     runs-on: windows-latest
-
-    strategy:
-      matrix:
-        arch: [x64, arm64]
 
     steps:
       - uses: actions/checkout@v4
@@ -170,22 +156,46 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release
 
+      - name: Install UPX
+        run: choco install upx -y
+
+      - name: Strip Windows binaries
+        run: |
+          cd build/windows/x64/runner/Release
+          strip *.exe || true
+          strip *.dll || true
+
+      - name: UPX compress Windows binaries
+        run: |
+          cd build/windows/x64/runner/Release
+          upx --best --lzma *.exe || true
+          upx --best --lzma *.dll || true
+
+      - name: Create Windows ZIP
+        run: |
+          cd build/windows/x64/runner/Release
+          powershell Compress-Archive -Path * -DestinationPath ../../../../LufeiCloud-Windows.zip
+
       - uses: actions/upload-artifact@v4
         with:
-          name: flux-windows-${{ matrix.arch }}
-          path: build/windows/${{ matrix.arch }}/runner/Release/
+          name: flux-windows-zip
+          path: LufeiCloud-Windows.zip
+
+      - name: Build MSIX
+        run: flutter pub run msix:create
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flux-windows-msix
+          path: build/windows/runner/Release/*.msix
 
 # ---------------------------------------------------------
-# 7. Linux（x64 + arm64）
+# 6. Linux（DEB + RPM + strip + UPX）
 # ---------------------------------------------------------
   linux:
-    name: Linux
+    name: Linux DEB + RPM
     needs: [prepare, detect_flutter]
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        arch: [x64, arm64]
 
     steps:
       - uses: actions/checkout@v4
@@ -206,35 +216,48 @@ jobs:
             pkg-config \
             libgtk-3-dev \
             liblzma-dev \
-            libayatana-appindicator3-dev
+            libayatana-appindicator3-dev \
+            ruby ruby-dev rubygems build-essential \
+            upx
+          sudo gem install --no-document fpm
 
       - name: Build Linux
         run: flutter build linux --release
 
+      - name: Strip Linux binaries
+        run: |
+          cd build/linux/x64/release/bundle
+          strip lib/*.so || true
+          strip *.so || true
+
+      - name: UPX compress Linux binaries
+        run: |
+          cd build/linux/x64/release/bundle
+          upx --best --lzma lib/*.so || true
+          upx --best --lzma *.so || true
+
+      - name: Create DEB package
+        run: |
+          fpm -s dir -t deb \
+            -n lufeicloud \
+            -v 1.0.0 \
+            --prefix /opt/lufeicloud \
+            build/linux/x64/release/bundle/
+
+      - name: Create RPM package
+        run: |
+          fpm -s dir -t rpm \
+            -n lufeicloud \
+            -v 1.0.0 \
+            --prefix /opt/lufeicloud \
+            build/linux/x64/release/bundle/
+
       - uses: actions/upload-artifact@v4
         with:
-          name: flux-linux-${{ matrix.arch }}
-          path: build/linux/${{ matrix.arch }}/release/bundle/
+          name: flux-linux-deb
+          path: *.deb
 
-# ---------------------------------------------------------
-# 8. 自动创建 GitHub Release
-# ---------------------------------------------------------
-  release:
-    name: Create GitHub Release
-    needs: [android, ios, macos, windows, linux]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          path: release_assets
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release_assets/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: flux-linux-rpm
+          path: *.rpm
