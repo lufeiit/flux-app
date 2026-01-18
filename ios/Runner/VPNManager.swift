@@ -44,7 +44,12 @@ class VPNManager: NSObject {
             }
             
             // Listen for status changes
-            NotificationCenter.default.addObserver(self, selector: #selector(self.statusDidChange(_:)), name: .NEVPNStatusDidChange, object: nil)
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(self.statusDidChange(_:)),
+                name: .NEVPNStatusDidChange,
+                object: nil
+            )
         }
     }
     
@@ -65,8 +70,7 @@ class VPNManager: NSObject {
             let proto = NETunnelProviderProtocol()
             proto.providerBundleIdentifier = self.extensionBundleId
             proto.serverAddress = "Flux"
-            // Pass V2Ray config to extension
-            proto.providerConfiguration = ["config": config]
+            proto.providerConfiguration = ["config": config]  // Pass V2Ray config
             
             manager.protocolConfiguration = proto
             manager.isEnabled = true
@@ -107,8 +111,7 @@ class VPNManager: NSObject {
 class VPNStatusStreamHandler: NSObject, FlutterStreamHandler {
     func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
         VPNManager.shared.statusSink = events
-        // Send initial status
-        events(VPNManager.shared.isConnected())
+        events(VPNManager.shared.isConnected())  // Send initial status
         return nil
     }
     
