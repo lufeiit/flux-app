@@ -115,7 +115,7 @@ jobs:
 
       - name: Strip macOS binaries
         run: |
-          find build/macos/Build/Products/Release/*.app -type f -perm +111 -exec strip {} \; || true
+          find build/macos/Build/Products/Release/*.app -type f -perm -111 -exec strip {} \; || true
 
       - name: Install create-dmg
         run: brew install create-dmg
@@ -255,9 +255,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: flux-linux-deb
-          path: *.deb
+          path: "*.deb"
 
       - uses: actions/upload-artifact@v4
         with:
           name: flux-linux-rpm
-          path: *.rpm
+          path: "*.rpm"
