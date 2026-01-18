@@ -65,7 +65,8 @@ jobs:
       - run: flutter test || true
 
       - name: Generate App Icons
-      - run: flutter pub run flutter_launcher_icons
+        run: flutter pub run flutter_launcher_icons
+
 
   # ---------------------------------------------------------
   # 3. Android（split-per-abi）
