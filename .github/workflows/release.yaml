@@ -6,10 +6,10 @@ on:
       - "v*"
   workflow_dispatch:
 
-# ---------------------------------------------------------
-# 1. 自动解析 pubspec.yaml → 自动匹配 Flutter 版本
-# ---------------------------------------------------------
 jobs:
+  # ---------------------------------------------------------
+  # 1. 自动解析 pubspec.yaml → 自动匹配 Flutter 版本
+  # ---------------------------------------------------------
   detect_flutter:
     name: Detect Flutter Version
     runs-on: ubuntu-latest
@@ -45,9 +45,9 @@ jobs:
 
           echo "flutter_version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
 
-# ---------------------------------------------------------
-# 2. Prepare：分析 + 测试 + 自动生成图标
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 2. Prepare：分析 + 测试 + 自动生成图标
+  # ---------------------------------------------------------
   prepare:
     name: Prepare & Analyze
     needs: detect_flutter
@@ -65,11 +65,11 @@ jobs:
       - run: flutter test || true
 
       - name: Generate App Icons
-        run: flutter pub run flutter_launcher_icons
+      - run: flutter pub run flutter_launcher_icons
 
-# ---------------------------------------------------------
-# 3. Android（split-per-abi）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 3. Android（split-per-abi）
+  # ---------------------------------------------------------
   android:
     name: Android
     needs: [prepare, detect_flutter]
@@ -92,9 +92,9 @@ jobs:
           name: flux-android
           path: build/app/outputs/flutter-apk/*.apk
 
-# ---------------------------------------------------------
-# 4. macOS（DMG + strip）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 4. macOS（构建 .app → 生成 DMG）
+  # ---------------------------------------------------------
   macos:
     name: macOS DMG
     needs: [prepare, detect_flutter]
@@ -135,10 +135,11 @@ jobs:
         with:
           name: flux-macos-dmg
           path: LufeiCloud.dmg
+          compression-level: 0
 
-# ---------------------------------------------------------
-# 5. Windows（ZIP + MSIX + strip + UPX）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 5. Windows（ZIP + MSIX + UPX）
+  # ---------------------------------------------------------
   windows:
     name: Windows ZIP + MSIX
     needs: [prepare, detect_flutter]
@@ -159,12 +160,6 @@ jobs:
       - name: Install UPX
         run: choco install upx -y
 
-      - name: Strip Windows binaries
-        run: |
-          cd build/windows/x64/runner/Release
-          strip *.exe || true
-          strip *.dll || true
-
       - name: UPX compress Windows binaries
         run: |
           cd build/windows/x64/runner/Release
@@ -174,7 +169,7 @@ jobs:
       - name: Create Windows ZIP
         run: |
           cd build/windows/x64/runner/Release
-          powershell Compress-Archive -Path * -DestinationPath ../../../../LufeiCloud-Windows.zip
+          powershell Compress-Archive -Path * -DestinationPath ../../../../../LufeiCloud-Windows.zip
 
       - uses: actions/upload-artifact@v4
         with:
@@ -182,16 +177,16 @@ jobs:
           path: LufeiCloud-Windows.zip
 
       - name: Build MSIX
-        run: flutter pub run msix:create
+        run: flutter pub run msix:create --install-certificate false
 
       - uses: actions/upload-artifact@v4
         with:
           name: flux-windows-msix
           path: build/windows/runner/Release/*.msix
 
-# ---------------------------------------------------------
-# 6. Linux（DEB + RPM + strip + UPX）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 6. Linux（DEB + RPM + strip + UPX）
+  # ---------------------------------------------------------
   linux:
     name: Linux DEB + RPM
     needs: [prepare, detect_flutter]

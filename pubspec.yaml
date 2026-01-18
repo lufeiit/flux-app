@@ -97,6 +97,10 @@ flutter:
     - assets/images/
     - assets/images/donation/
     - assets/images/screenshots/
+    - assets_desktop/bin/windows/
+    - assets_desktop/bin/macos/
+    - assets_desktop/bin/linux/
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
