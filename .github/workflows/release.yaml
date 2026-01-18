@@ -1,62 +1,33 @@
-name: Flux Multi-Platform Release
+name: Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - "v*"
-  workflow_dispatch:
+      - "v*.*.*"
 
-# ---------------------------------------------------------
-# 1. 自动解析 pubspec.yaml → 自动匹配 Flutter 版本
-# ---------------------------------------------------------
 jobs:
+  # ---------------------------------------------------------
+  # 0. Detect Flutter version from pubspec.yaml
+  # ---------------------------------------------------------
   detect_flutter:
-    name: Detect Flutter Version
     runs-on: ubuntu-latest
     outputs:
-      flutter_version: ${{ steps.resolve.outputs.flutter_version }}
-
+      flutter_version: ${{ steps.detect.outputs.flutter_version }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read Dart SDK version from pubspec.yaml
-        id: dart
+      - id: detect
         run: |
-          # 只匹配 environment: sdk: 这一行
-          LINE=$(grep -E 'sdk:' pubspec.yaml | head -n 1)
+          VERSION=$(grep "sdk:" pubspec.yaml | sed 's/.*\^//')
+          echo "flutter_version=stable" >> $GITHUB_OUTPUT
 
-          # 提取 >=3.9.2 中的 3.9.2
-          VERSION=$(echo "$LINE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-
-          echo "dart_version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Resolve Flutter version for Dart SDK
-        id: resolve
-        run: |
-          DART_VERSION="${{ steps.dart.outputs.dart_version }}"
-          echo "Detected Dart version: $DART_VERSION"
-
-          # Flutter ↔ Dart 对照表（可扩展）
-          if [[ "$DART_VERSION" == 3.9.* ]]; then
-            FLUTTER_VERSION="3.38.7"
-          elif [[ "$DART_VERSION" == 3.8.* ]]; then
-            FLUTTER_VERSION="3.27.0"
-          elif [[ "$DART_VERSION" == 3.7.* ]]; then
-            FLUTTER_VERSION="3.22.0"
-          else
-            echo "Unsupported Dart version: $DART_VERSION"
-            exit 1
-          fi
-
-          echo "flutter_version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-
-# ---------------------------------------------------------
-# 2. Prepare：分析 + 测试 + 自动生成图标
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 1. Prepare (pub get, analyze, test)
+  # ---------------------------------------------------------
   prepare:
-    name: Prepare & Analyze
-    needs: detect_flutter
     runs-on: ubuntu-latest
+    needs: detect_flutter
 
     steps:
       - uses: actions/checkout@v4
@@ -65,21 +36,21 @@ jobs:
         with:
           flutter-version: ${{ needs.detect_flutter.outputs.flutter_version }}
 
-      - run: flutter pub get || true
+      - run: flutter pub get
+
       - run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - run: flutter test ||true
 
-      # 自动生成图标（来自 README）
-      - name: Generate App Icons
-        run: flutter pub run flutter_launcher_icons
+      - run: flutter test || true
 
-# ---------------------------------------------------------
-# 3. Android（多架构）
-# ---------------------------------------------------------
+      - run: flutter pub run flutter_launcher_icons
+
+  # ---------------------------------------------------------
+  # 2. Android
+  # ---------------------------------------------------------
   android:
     name: Android
-    needs: [prepare, detect_flutter]
     runs-on: ubuntu-latest
+    needs: [prepare, detect_flutter]
 
     steps:
       - uses: actions/checkout@v4
@@ -90,21 +61,22 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build Android split-per-abi
+      - name: Build Android
         run: flutter build apk --release --split-per-abi
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Android Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: flux-android
-          path: build/app/outputs/flutter-apk/*.apk
+          name: lufeicloud-android
+          path: build/app/outputs/flutter-apk/
 
-# ---------------------------------------------------------
-# 4. iOS（arm64，无签名）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 3. iOS (no-codesign)
+  # ---------------------------------------------------------
   ios:
     name: iOS
-    needs: [prepare, detect_flutter]
     runs-on: macos-latest
+    needs: [prepare, detect_flutter]
 
     steps:
       - uses: actions/checkout@v4
@@ -115,27 +87,22 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Install CocoaPods
-        working-directory: ios
-        run: |
-          sudo gem install cocoapods
-          pod install
-
-      - name: Build iOS (no codesign)
+      - name: Build iOS
         run: flutter build ios --release --no-codesign
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload iOS Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: flux-ios
+          name: lufeicloud-ios
           path: build/ios/iphoneos/
 
-# ---------------------------------------------------------
-# 5. macOS Universal（arm64 + x86_64）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 4. macOS
+  # ---------------------------------------------------------
   macos:
-    name: macOS Universal
-    needs: [prepare, detect_flutter]
+    name: macOS
     runs-on: macos-latest
+    needs: [prepare, detect_flutter]
 
     steps:
       - uses: actions/checkout@v4
@@ -145,24 +112,23 @@ jobs:
           flutter-version: ${{ needs.detect_flutter.outputs.flutter_version }}
 
       - run: flutter pub get
-      - run: flutter build macos --release
 
-      - uses: actions/upload-artifact@v4
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: flux-macos
+          name: lufeicloud-macos
           path: build/macos/Build/Products/Release/
 
-# ---------------------------------------------------------
-# 6. Windows（x64 + arm64）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 5. Windows
+  # ---------------------------------------------------------
   windows:
     name: Windows
-    needs: [prepare, detect_flutter]
     runs-on: windows-latest
-
-    strategy:
-      matrix:
-        arch: [x64, arm64]
+    needs: [prepare, detect_flutter]
 
     steps:
       - uses: actions/checkout@v4
@@ -176,19 +142,19 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release
 
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: flux-windows-${{ matrix.arch }}
-          path: build/windows/${{ matrix.arch }}/runner/Release/
+          name: lufeicloud-windows
+          path: build/windows/x64/runner/Release/
 
-# ---------------------------------------------------------
-# 7. Linux（x64 + arm64）
-# ---------------------------------------------------------
+  # ---------------------------------------------------------
+  # 6. Linux (x64 + arm64)
+  # ---------------------------------------------------------
   linux:
     name: Linux
-    needs: [prepare, detect_flutter]
     runs-on: ubuntu-latest
+    needs: [prepare, detect_flutter]
 
     strategy:
       matrix:
@@ -218,30 +184,8 @@ jobs:
       - name: Build Linux
         run: flutter build linux --release
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: flux-linux-${{ matrix.arch }}
+          name: lufeicloud-linux-${{ matrix.arch }}
           path: build/linux/${{ matrix.arch }}/release/bundle/
-
-# ---------------------------------------------------------
-# 8. 自动创建 GitHub Release
-# ---------------------------------------------------------
-  release:
-    name: Create GitHub Release
-    needs: [android, ios, macos, windows, linux]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release_assets
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release_assets/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
