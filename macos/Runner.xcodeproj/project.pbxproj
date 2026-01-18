@@ -16,7 +16,7 @@
 			dependencies = (
 			);
 			name = "Flutter Assemble";
-			productName = FLX;
+			productName = LufeiCloud;
 		};
 /* End PBXAggregateTarget section */
 

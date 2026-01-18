@@ -17,7 +17,7 @@ class ApiConfig {
       return await _remoteConfig.getActiveDomain();
     } catch (e) {
       // 远程配置获取失败，返回默认域名
-      return 'YOUR_API_URL_HERE';
+      return 'http://210.16.184.238:33651/lufei';
     }
   }
 

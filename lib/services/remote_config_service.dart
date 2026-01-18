@@ -16,13 +16,13 @@ class RemoteConfigService {
   /// 建议使用多个 CDN 地址作为备份
   static const List<String> _ossUrls = [
     // TODO: 替换为您的 OSS 配置文件地址
-    // 'https://your-bucket.oss-cn-hangzhou.aliyuncs.com/config.json',
-    // 'https://cdn.example.com/config.json',
-    // 'https://raw.githubusercontent.com/yourorg/yourrepo/main/config.json',
+    'https://osnc3.s3.ap-northeast-3.amazonaws.com/opnew/store_oss/2026/01/18/2a9336cb-2af1-4264-802a-e4223fd7172a.json',
+    'https://osnc4.s3.ap-east-1.amazonaws.com/opnew/store_oss/2026/01/18/2a9336cb-2af1-4264-802a-e4223fd7172a.json',
+    'https://oss-1350701856.cos.ap-guangzhou.myqcloud.com/opnew/store_oss/2026/01/18/2a9336cb-2af1-4264-802a-e4223fd7172a.json',
   ];
 
   /// 默认 API 域名（当 OSS 配置获取失败时使用）
-  static const String _defaultDomain = 'YOUR_API_URL_HERE';
+  static const String _defaultDomain = 'http://210.16.184.238:33651/lufei';
 
   /// 配置缓存有效期（小时）
   static const int _cacheValidHours = 6;

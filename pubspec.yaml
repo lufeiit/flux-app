@@ -112,9 +112,9 @@ flutter:
   # see https://flutter.dev/to/font-from-package
  
 msix_config:
-  display_name: Your App Name
-  publisher_display_name: Your Company
-  identity_name: com.example.yourapp
+  display_name: lufeicloud
+  publisher_display_name: lufeicloud
+  identity_name: com.example.lufeicloud
   msix_version: 1.0.0.0
   logo_path: assets/images/app_icon.png
   capabilities: "internetClient,internetClientServer,privateNetworkClientServer"
