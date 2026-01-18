@@ -1,4 +1,4 @@
-package com.example.yourapp
+package com.lufeicloud.app
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator

@@ -1,4 +1,4 @@
-package com.example.yourapp
+package com.lufeicloud.app
 
 import android.app.Service
 import android.content.Context
@@ -49,8 +49,8 @@ class FluxVpnService : VpnService() {
     
     companion object {
         private const val TAG = "Flux"
-        const val ACTION_START = "com.example.yourapp.VPN_START"
-        const val ACTION_STOP = "com.example.yourapp.VPN_STOP"
+        const val ACTION_START = "com.lufeicloud.app.VPN_START"
+        const val ACTION_STOP = "com.lufeicloud.app.VPN_STOP"
         private const val VPN_ADDRESS = "10.0.0.2"
         private const val VPN_ROUTE = "0.0.0.0"
         private const val VPN_MTU = 1450  // 移动网络下适当提高 MTU，减少分片提升吞吐

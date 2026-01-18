@@ -14,9 +14,9 @@ import 'doh_resolver.dart';
 /// Android/iOS: 通过 MethodChannel 调用原生代码
 /// Win/Mac/Linux: 直接在 Dart 层管理进程 (Xray & Hysteria2)
 class V2rayService {
-  static const MethodChannel _channel = MethodChannel('com.example.yourapp/v2ray');
+  static const MethodChannel _channel = MethodChannel('com.lufeicloud.app/v2ray');
   static const EventChannel _statusChannel =
-      EventChannel('com.example.yourapp/v2ray_status');
+      EventChannel('com.lufeicloud.app/v2ray_status');
   static Stream<bool>? _statusStream;
   
   // 桌面端专用

@@ -8,7 +8,7 @@
 
 # Keep native interface classes
 -keep class hev.htproxy.** { *; }
--keep class com.example.yourapp.** { *; }
+-keep class com.lufeicloud.app.** { *; }
 -keepnames class * extends android.app.Activity
 -keepnames class * extends android.app.Application
 -keepnames class * extends android.app.Service
