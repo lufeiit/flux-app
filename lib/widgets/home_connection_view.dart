@@ -81,6 +81,7 @@ class _HomeConnectionViewState extends State<HomeConnectionView>
     final isBusy =
         widget.isLoading || widget.status == ConnectionButtonStatus.connecting;
     final reduceMotion = MediaQuery.of(context).disableAnimations;
+
     final style = widget.isLoading &&
             widget.status == ConnectionButtonStatus.disconnected
         ? _StatusStyle(
@@ -88,6 +89,7 @@ class _HomeConnectionViewState extends State<HomeConnectionView>
             action: AppLocalizations.of(context)!.syncing,
           )
         : _statusStyle(context, widget.status);
+
     if (reduceMotion && _loopController.isAnimating) {
       _loopController.stop();
     } else if (!reduceMotion &&
@@ -96,16 +98,19 @@ class _HomeConnectionViewState extends State<HomeConnectionView>
         !_loopController.isAnimating) {
       _loopController.repeat();
     }
+
     final buttonDuration =
         reduceMotion ? Duration.zero : const Duration(milliseconds: 220);
     final textDuration =
         reduceMotion ? Duration.zero : const Duration(milliseconds: 180);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final buttonWidth =
             (constraints.maxWidth * 0.68).clamp(220.0, 320.0);
         final indicatorTarget =
             widget.status == ConnectionButtonStatus.connecting ? 1.0 : 0.0;
+
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -175,26 +180,31 @@ class _HomeConnectionViewState extends State<HomeConnectionView>
                                 duration: textDuration,
                                 transitionBuilder: (child, animation) =>
                                     FadeTransition(
-                                  opacity: animation,
-                                  child: ScaleTransition(
-                                    scale: animation,
-                                    child: child,
-                                  ),
-                                ),
-                                child:
-                                    _buildIndicator(style, isBusy, reduceMotion),
+                                      opacity: animation,
+                                      child: ScaleTransition(
+                                        scale: animation,
+                                        child: child,
+                                      ),
+                                    ),
+                                child: _buildIndicator(
+                                    style, isBusy, reduceMotion),
                               ),
                               const SizedBox(width: 14),
+
+                              /// FIXED: AnimatedSwitcher 结构错误（缺少 child: child）
                               AnimatedSwitcher(
                                 duration: textDuration,
                                 transitionBuilder: (child, animation) =>
                                     FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: const Offset(0, 0.2),
-                                      end: Offset.zero,
-                                    ).animate(animation),
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(0, 0.2),
+                                          end: Offset.zero,
+                                        ).animate(animation),
+                                        child: child, //// FIXED HERE
+                                      ),
+                                    ),
                                 child: Text(
                                   style.action,
                                   key: ValueKey(style.action),
@@ -439,7 +449,6 @@ class _HomeConnectionViewState extends State<HomeConnectionView>
         return const Color(0xFF0E1320);
     }
   }
-
 }
 
 class _StatusStyle {
